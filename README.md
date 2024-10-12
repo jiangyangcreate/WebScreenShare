@@ -56,3 +56,5 @@ pip install flask opencv-python Pillow greenlet pyaudio Flask
 # Run
 python app.py
 ```
+
+![alt text](show.png)
