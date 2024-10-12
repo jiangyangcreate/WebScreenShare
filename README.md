@@ -1,27 +1,32 @@
+# Screen Sharing and File Transfer Tool
 
-1. 当你的电脑无法通过视频线连接到电视机，可能是由于线缆长度不足或者接口不兼容，而你的电视机恰好支持浏览器功能。
+[English](README.md) | [中文](README_CN.md)
 
-2. 当你在外面参加培训或交流活动，现场只提供了一个WiFi网络。大家刚刚熟悉，马上就要开始屏幕分享，你需要一个快速的方式让大家都能看到你的屏幕。
+This tool allows you to capture and share your screen and audio (including device audio and microphone input) through a web interface. It's particularly useful in situations where:
 
-这个时候，你就需要一个工具来捕获和分享你的屏幕和音频（包括设备音频和麦克风输入），并通过网页形式与他人共享。这样，观众无需下载任何会议软件，仅需打开浏览器即可观看。
+1. Your computer can't connect to a TV via video cable due to length or compatibility issues, but the TV has a browser function.
 
-当然有时候你需要提供必要的文件，比如代码，文档等。所以这个程序还允许你上传与下载文件。上传的文件会保存在当前目录下的`upload`文件夹中，你也可以从`upload`文件夹中下载文件。
+2. You're at a training or networking event with only a WiFi network available, and you need to quickly share your screen with others.
 
-例如一个伙伴上传了`test.txt`文件，另一个伙伴可以从`http://127.0.0.1:8001/download/test.txt`下载文件。
+Viewers can watch your screen without downloading any meeting software, just by opening a browser.
 
-## 安装依赖
+The program also allows you to upload and download files. Uploaded files are saved in the `upload` folder in the current directory, and can be downloaded from there.
+
+For example, if a colleague uploads a `test.txt` file, another can download it from `http://127.0.0.1:8001/download/test.txt`.
+
+## Installation
 
 ```bash
 pip install flask opencv-python Pillow greenlet pyaudio Flask
 ```
 
-## 项目目录结构
+## Project Structure
 
-项目下有两个文件夹： templates 和 uploads。
+The project has two folders: templates and uploads.
 
-templates 文件夹中包含一个 upload.html 文件，用于页面展示。
+The templates folder contains an upload.html file for page display.
 
-uploads 文件夹用于保存上传的文件。
+The uploads folder is used to store uploaded files.
 
 ```bash showLineNumbers
 your_project/
@@ -30,25 +35,24 @@ your_project/
 │   └── stream.html
 ├── uploads/
 └── app.py
-``` 
-
-## 路由说明
-
-`/` 路由。它处理文件上传功能。
-
-`/d` 路由。它提供桌面视频流+音频流。
-
-`/c` 路由。它提供摄像头视频流+音频流。
-
-`/download/<filename>` 路由。它提供文件下载功能。
-
-## 使用
-
-```bash
-# 模块安装
-pip install flask opencv-python Pillow greenlet pyaudio Flask
-
-# 运行
-python app.py
 ```
 
+## Routes
+
+`/` route: Handles file upload functionality.
+
+`/d` route: Provides desktop video stream + audio stream.
+
+`/c` route: Provides camera video stream + audio stream.
+
+`/download/<filename>` route: Provides file download functionality.
+
+## Usage
+
+```bash
+# Install modules
+pip install flask opencv-python Pillow greenlet pyaudio Flask
+
+# Run
+python app.py
+```
