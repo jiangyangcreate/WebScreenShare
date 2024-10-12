@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>上传文件</title>
+</head>
+<body>
+    <h1>上传文件</h1>
+    <form method="post" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <input type="submit" value="上传">
+    </form>
+    {% if filename %}
+        <p>文件上传成功！</p>
+        <a href="{{ url_for('download_file', filename=filename) }}">下载 {{ filename }}</a>
+    {% endif %}
+</body>
+</html>
