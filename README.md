@@ -41,3 +41,14 @@ your_project/
 `/c` 路由。它提供摄像头视频流+音频流。
 
 `/download/<filename>` 路由。它提供文件下载功能。
+
+## 使用
+
+```bash
+# 模块安装
+pip install flask opencv-python Pillow greenlet pyaudio Flask
+
+# 运行
+python app.py
+```
+
