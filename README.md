@@ -17,7 +17,7 @@ For example, if a colleague uploads a `test.txt` file, another can download it f
 ## Installation
 
 ```bash
-pip install flask opencv-python Pillow greenlet pyaudio Flask
+pip install Flask opencv-python numpy Pillow sounddevice
 ```
 
 ## Project Structure

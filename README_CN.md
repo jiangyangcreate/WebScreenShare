@@ -15,7 +15,7 @@
 ## 安装依赖
 
 ```bash
-pip install flask opencv-python Pillow greenlet pyaudio Flask
+pip install Flask opencv-python numpy Pillow sounddevice
 ```
 
 ## 项目目录结构

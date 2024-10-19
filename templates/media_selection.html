@@ -1,0 +1,87 @@
+<!-- templates/media_selection.html -->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选择设备</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            color: #ff6600;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+        label {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        input[type="submit"] {
+            background-color: #ff6600;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        input[type="submit"]:hover {
+            background-color: #e65c00;
+        }
+    </style>
+    <!-- 引入设备检测的 JavaScript 文件 -->
+    <script src="{{ url_for('static', filename='js/deviceDetection.js') }}"></script>
+    <!-- 引入媒体选择的 JavaScript 文件 -->
+    <script src="{{ url_for('static', filename='js/mediaSelection.js') }}"></script>
+</head>
+<body>
+    <h1>选择您要使用的设备</h1>
+    <form id="device-form" method="get" action="{{ url_for('media_interface') }}">
+        <label>
+            <input type="checkbox" id="screen-checkbox" name="screen" >
+            屏幕
+        </label>
+        <label>
+            <input type="checkbox" id="camera-checkbox" name="camera" disabled>
+            摄像头
+        </label>
+        <label>
+            <input type="checkbox" id="sound-checkbox" name="sound" disabled>
+            声音
+        </label>
+        <input type="submit" value="开始使用">
+    </form>
+
+    <script>
+        // 确保至少选择一项
+        document.getElementById('device-form').addEventListener('submit', function(event) {
+            const screen = document.getElementById('screen-checkbox').checked;
+            const camera = document.getElementById('camera-checkbox').checked;
+            const sound = document.getElementById('sound-checkbox').checked;
+            if (!screen && !camera && !sound) {
+                alert('请至少选择一项设备');
+                event.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

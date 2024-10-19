@@ -1,18 +1,97 @@
+<!-- templates/upload.html -->
 <!doctype html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>上传文件</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上传新文件</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+        }
+        h1, h2 {
+            color: #ff6600;
+        }
+        form {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        input[type="file"] {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        input[type="submit"] {
+            background-color: #ff6600;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            font-size: 16px;
+        }
+        input[type="submit"]:hover {
+            background-color: #e65c00;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin: 5px 0;
+        }
+        a {
+            color: #ff6600;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        a:hover {
+            color: #e65c00;
+        }
+        .status {
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        .nav-links {
+            margin-top: 20px;
+        }
+        .nav-links a {
+            margin: 0 10px;
+        }
+    </style>
+    <!-- 引入设备检测的 JavaScript 文件 -->
+    <script src="{{ url_for('static', filename='js/deviceDetection.js') }}"></script>
 </head>
 <body>
-    <h1>上传文件</h1>
+    <h1>上传新文件</h1>
     <form method="post" enctype="multipart/form-data">
-        <input type="file" name="file">
+        <input type="file" name="file" required>
         <input type="submit" value="上传">
     </form>
-    {% if filename %}
-        <p>文件上传成功！</p>
-        <a href="{{ url_for('download_file', filename=filename) }}">下载 {{ filename }}</a>
-    {% endif %}
+    <h2>已上传的文件</h2>
+    <ul>
+    {% for file in files %}
+        <li><a href="{{ url_for('download_file', filename=file) }}">{{ file }}</a></li>
+    {% endfor %}
+    </ul>
+    <div class="nav-links">
+        <a href="{{ url_for('index') }}">返回首页</a>
+        <a href="{{ url_for('media_selection') }}">前往媒体选择页面</a>
+    </div>
+    <div class="status">
+        <p id="camera-status">摄像头: 检测中...</p>
+        <p id="microphone-status">麦克风: 检测中...</p>
+    </div>
 </body>
 </html>

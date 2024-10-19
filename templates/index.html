@@ -1,0 +1,50 @@
+<!-- templates/index.html -->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首页</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            color: #ff6600;
+        }
+        a {
+            color: #ff6600;
+            text-decoration: none;
+            font-size: 20px;
+            margin: 10px;
+            transition: color 0.3s;
+        }
+        a:hover {
+            color: #e65c00;
+        }
+        .status {
+            margin-top: 30px;
+            font-size: 18px;
+        }
+    </style>
+    <!-- 引入设备检测的 JavaScript 文件 -->
+    <script src="{{ url_for('static', filename='js/deviceDetection.js') }}"></script>
+</head>
+<body>
+    <h1>欢迎使用文件上传和下载服务</h1>
+    <a href="{{ url_for('upload_file') }}">前往上传页面</a>
+    <a href="{{ url_for('media_selection') }}">前往多媒体分享页面</a>
+    <div class="status">
+        <p id="camera-status">摄像头: 检测中...</p>
+        <p id="microphone-status">麦克风: 检测中...</p>
+    </div>
+</body>
+</html>

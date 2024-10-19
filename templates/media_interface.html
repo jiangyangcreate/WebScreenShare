@@ -1,0 +1,93 @@
+<!-- templates/media_interface.html -->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>媒体接口</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #ff6600;
+            text-align: center;
+        }
+        #media-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        video, iframe {
+            border: 2px solid #ff6600;
+            border-radius: 5px;
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>媒体接口</h1>
+    <div id="media-container">
+        {% if screen %}
+            <div>
+                <h2>屏幕共享</h2>
+                <video id="screen-video" autoplay></video>
+            </div>
+        {% endif %}
+        {% if camera %}
+            <div>
+                <h2>摄像头</h2>
+                <video id="camera-video" autoplay></video>
+            </div>
+        {% endif %}
+        {% if sound %}
+            <div>
+                <h2>声音</h2>
+                <audio id="audio-stream" controls></audio>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const screenElement = document.getElementById('screen-video');
+            const cameraElement = document.getElementById('camera-video');
+            const audioElement = document.getElementById('audio-stream');
+
+            {% if screen %}
+            try {
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                screenElement.srcObject = screenStream;
+            } catch (err) {
+                console.error('屏幕共享错误:', err);
+            }
+            {% endif %}
+
+            {% if camera %}
+            try {
+                const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                cameraElement.srcObject = cameraStream;
+            } catch (err) {
+                console.error('摄像头错误:', err);
+            }
+            {% endif %}
+
+            {% if sound %}
+            try {
+                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioElement.srcObject = audioStream;
+            } catch (err) {
+                console.error('声音错误:', err);
+            }
+            {% endif %}
+        });
+    </script>
+</body>
+</html>
