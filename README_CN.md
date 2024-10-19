@@ -10,49 +10,35 @@
 
 当然有时候你需要提供必要的文件，比如代码，文档等。所以这个程序还允许你上传与下载文件。上传的文件会保存在当前目录下的`upload`文件夹中，你也可以从`upload`文件夹中下载文件。
 
-例如一个伙伴上传了`test.txt`文件，另一个伙伴可以从`http://127.0.0.1:8001/download/test.txt`下载文件。
+例如一个伙伴上传了`test.txt`文件，另一个伙伴可以下载文件。
 
 ## 安装依赖
 
 ```bash
-pip install Flask opencv-python numpy Pillow sounddevice
+pip install Flask
 ```
 
 ## 项目目录结构
 
 项目下有两个文件夹： templates 和 uploads。
 
-templates 文件夹中包含一个 upload.html 文件，用于页面展示。
+templates 文件夹用于页面展示。
 
 uploads 文件夹用于保存上传的文件。
 
 ```bash showLineNumbers
 your_project/
 ├── templates/
-│   └── upload.html
-│   └── stream.html
 ├── uploads/
 └── app.py
 ``` 
-
-## 路由说明
-
-`/` 路由。它处理文件上传功能。
-
-`/d` 路由。它提供桌面视频流+音频流。
-
-`/c` 路由。它提供摄像头视频流+音频流。
-
-`/download/<filename>` 路由。它提供文件下载功能。
 
 ## 使用
 
 ```bash
 # 模块安装
-pip install flask opencv-python Pillow greenlet pyaudio Flask
+pip install flask 
 
 # 运行
 python app.py
 ```
-
-![alt text](show.png)
