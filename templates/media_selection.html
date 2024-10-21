@@ -62,15 +62,14 @@
         </label>
         <label>
             <input type="checkbox" id="camera-checkbox" name="camera" disabled>
-            摄像头
+            <span id="camera-status">摄像头: 检测中...</span>
         </label>
         <label>
             <input type="checkbox" id="sound-checkbox" name="sound" disabled>
-            声音
+            <span id="microphone-status">麦克风: 检测中...</span>
         </label>
         <input type="submit" value="开始使用">
     </form>
-
     <script>
         // 确保至少选择一项
         document.getElementById('device-form').addEventListener('submit', function(event) {
