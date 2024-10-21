@@ -38,3 +38,11 @@ pip install flask
 # 运行
 python app.py
 ```
+
+## show in use
+
+![alt text](img/show3.png)
+
+![alt text](img/show2.png)
+
+![alt text](img/show.png)

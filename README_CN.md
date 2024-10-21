@@ -42,3 +42,11 @@ pip install flask
 # 运行
 python app.py
 ```
+
+## 使用截图
+
+![alt text](img/show3.png)
+
+![alt text](img/show2.png)
+
+![alt text](img/show.png)
