@@ -39,11 +39,17 @@
         #hidden-audio {
             display: none;
         }
-        /* 喇叭按钮样式 */
-        #speaker-button {
+        /* 按钮容器 */
+        #button-container {
             position: fixed;
             bottom: 20px;
             right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        /* 喇叭按钮样式 */
+        .control-button {
             background-color: #ff6600;
             border: none;
             border-radius: 50%;
@@ -55,10 +61,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
         }
-        #speaker-button.muted::after {
+        .control-button.muted::after {
             content: '🔇';
+        }
+        /* 录屏按钮样式 */
+        #record-button.recording {
+            background-color: red;
         }
         /* 可拖拽和可调整大小的摄像头视频样式 */
         .draggable {
@@ -92,15 +101,21 @@
         {% endif %}
     </div>
 
-    {% if sound %}
-        <!-- 喇叭按钮用于声音控制 -->
-        <button id="speaker-button">🔊</button>
-    {% endif %}
+    <!-- 按钮容器始终显示 -->
+    <div id="button-container">
+        {% if sound %}
+            <!-- 喇叭按钮用于声音控制 -->
+            <button id="speaker-button" class="control-button">🔊</button>
+        {% endif %}
+        <!-- 录屏按钮始终显示 -->
+        <button id="record-button" class="control-button">🎥</button>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const screenElement = document.getElementById('screen-video');
             const cameraElement = document.getElementById('camera-video');
+            const recordButton = document.getElementById('record-button');
             {% if sound %}
             const speakerButton = document.getElementById('speaker-button');
             const hiddenAudio = document.getElementById('hidden-audio');
@@ -112,6 +127,7 @@
                 screenElement.srcObject = screenStream;
             } catch (err) {
                 console.error('屏幕共享错误:', err);
+                alert('无法共享屏幕。请检查权限或尝试其他浏览器。');
             }
             {% endif %}
 
@@ -121,6 +137,7 @@
                 cameraElement.srcObject = cameraStream;
             } catch (err) {
                 console.error('摄像头错误:', err);
+                alert('无法访问摄像头。请检查权限或尝试其他浏览器。');
             }
             {% endif %}
 
@@ -133,6 +150,7 @@
                 });
             } catch (err) {
                 console.error('声音错误:', err);
+                alert('无法访问麦克风或声音设备。请检查权限或尝试其他浏览器。');
             }
 
             let isMuted = false;
@@ -147,37 +165,153 @@
             });
 
             // 使喇叭按钮可拖拽
-            (function makeDraggable(el) {
-                let isDragging = false;
-                let startX, startY, origX, origY;
+            if (speakerButton) {
+                (function makeDraggable(el) {
+                    let isDragging = false;
+                    let startX, startY, origX, origY;
 
-                el.addEventListener('mousedown', (e) => {
-                    isDragging = true;
-                    startX = e.clientX;
-                    startY = e.clientY;
-                    const rect = el.getBoundingClientRect();
-                    origX = rect.left;
-                    origY = rect.top;
-                    document.body.style.userSelect = 'none';
-                });
+                    el.addEventListener('mousedown', (e) => {
+                        if (el.id === 'speaker-button') {
+                            isDragging = true;
+                            startX = e.clientX;
+                            startY = e.clientY;
+                            const rect = el.getBoundingClientRect();
+                            origX = rect.left;
+                            origY = rect.top;
+                            document.body.style.userSelect = 'none';
+                        }
+                    });
 
-                document.addEventListener('mousemove', (e) => {
-                    if (isDragging) {
-                        const dx = e.clientX - startX;
-                        const dy = e.clientY - startY;
-                        el.style.left = `${origX + dx}px`;
-                        el.style.top = `${origY + dy}px`;
-                        el.style.right = 'auto';
-                        el.style.bottom = 'auto';
-                    }
-                });
+                    document.addEventListener('mousemove', (e) => {
+                        if (isDragging) {
+                            const dx = e.clientX - startX;
+                            const dy = e.clientY - startY;
+                            el.style.left = `${origX + dx}px`;
+                            el.style.top = `${origY + dy}px`;
+                            el.style.right = 'auto';
+                            el.style.bottom = 'auto';
+                        }
+                    });
 
-                document.addEventListener('mouseup', () => {
-                    isDragging = false;
-                    document.body.style.userSelect = 'auto';
-                });
-            })(speakerButton);
+                    document.addEventListener('mouseup', () => {
+                        isDragging = false;
+                        document.body.style.userSelect = 'auto';
+                    });
+                })(speakerButton);
+            }
             {% endif %}
+
+            // 录屏功能
+            let mediaRecorder;
+            let recordedChunks = [];
+            let isRecording = false;
+
+            recordButton.addEventListener('click', toggleRecording);
+
+            async function toggleRecording() {
+                if (!isRecording) {
+                    await startRecording();
+                } else {
+                    stopRecording();
+                }
+            }
+
+            async function startRecording() {
+                recordButton.classList.add('recording');
+                recordButton.textContent = '⏹️'; // 更改按钮图标为停止
+                isRecording = true;
+                try {
+                    let combinedStream;
+                    {% if screen and camera %}
+                        // 同时录制屏幕和摄像头
+                        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        let audioStream;
+                        {% if sound %}
+                            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        {% endif %}
+                        combinedStream = new MediaStream([
+                            ...screenStream.getVideoTracks(),
+                            ...cameraStream.getVideoTracks(),
+                            {% if sound %}
+                                ...audioStream.getAudioTracks()
+                            {% endif %}
+                        ]);
+                    {% elif screen %}
+                        // 仅录制屏幕
+                        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                        combinedStream = screenStream;
+                    {% else %}
+                        alert('无法获取屏幕或摄像头权限');
+                        recordButton.classList.remove('recording');
+                        recordButton.textContent = '🎥'; // 恢复按钮图标
+                        isRecording = false;
+                        return;
+                    {% endif %}
+
+                    mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/mp4' });
+
+                    mediaRecorder.ondataavailable = function(event) {
+                        if (event.data.size > 0) {
+                            recordedChunks.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = saveRecording;
+
+                    mediaRecorder.start(1000); // 每秒获取一次数据片段
+
+                } catch (err) {
+                    console.error('录屏错误:', err);
+                    alert('录屏时发生错误。请检查权限或尝试其他浏览器。');
+                    recordButton.classList.remove('recording');
+                    recordButton.textContent = '🎥'; // 恢复按钮图标
+                    isRecording = false;
+                }
+            }
+
+            function stopRecording() {
+                recordButton.classList.remove('recording');
+                recordButton.textContent = '🎥'; // 恢复按钮图标
+                isRecording = false;
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                }
+            }
+
+            function saveRecording() {
+                const blob = new Blob(recordedChunks, { type: 'video/mp4' });
+                recordedChunks = [];
+
+                const now = new Date();
+                const filename = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_` +
+                                 `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}` +
+                                 `_${now.getMilliseconds()}ms.mp4`;
+
+                const formData = new FormData();
+                formData.append('video', blob, filename);
+
+                fetch('/upload_video', {  // 修改为 '/upload_video'
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('录屏已保存，文件名: ' + data.filename);
+                    } else {
+                        alert('保存失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('上传错误:', error);
+                    alert('上传过程中发生错误');
+                });
+            }
+
+            function pad(num) {
+                return num.toString().padStart(2, '0');
+            }
 
             {% if screen and camera %}
             // 使摄像头容器可拖拽和可调整大小

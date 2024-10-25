@@ -1,7 +1,8 @@
 # app.py
 
-from flask import Flask, request, redirect, url_for, send_from_directory, render_template
+from flask import Flask, request, redirect, url_for, send_from_directory, render_template, jsonify
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -11,7 +12,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # 允许的文件扩展名
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'mp4'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -38,6 +39,23 @@ def upload_file():
     files = os.listdir(app.config['UPLOAD_FOLDER'])
     return render_template('upload.html', files=files)
 
+@app.route('/upload_video', methods=['POST'])
+def upload_video():
+    if 'video' not in request.files:
+        return jsonify({'status': 'fail', 'message': 'No video part'}), 400
+    video = request.files['video']
+    if video.filename == '':
+        return jsonify({'status': 'fail', 'message': 'No selected video'}), 400
+    if video and allowed_file(video.filename):
+        # 自动生成文件名为当前日期+时间（精确到毫秒）
+        now = datetime.now()
+        filename = now.strftime("%Y-%m-%d_%H-%M-%S_%f")[:-3] + ".mp4"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        video.save(filepath)
+        return jsonify({'status': 'success', 'filename': filename}), 200
+    else:
+        return jsonify({'status': 'fail', 'message': 'File type not allowed'}), 400
+
 @app.route('/uploads/<filename>')
 def download_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -59,4 +77,4 @@ def media_interface():
     return render_template('media_interface.html', screen=screen, camera=camera, sound=sound)
 
 if __name__ == '__main__':
-    app.run(debug=True,host='0.0.0.0',port=8080)
+    app.run(debug=True, host='0.0.0.0', port=8080)
