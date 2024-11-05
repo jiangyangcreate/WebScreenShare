@@ -11,12 +11,6 @@ UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# 允许的文件扩展名
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'mp4'}
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -30,7 +24,7 @@ def upload_file():
         file = request.files['file']
         if file.filename == '':
             return redirect(request.url)
-        if file and allowed_file(file.filename):
+        if file:
             filename = file.filename
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             return redirect(url_for('upload_file'))
@@ -46,7 +40,7 @@ def upload_video():
     video = request.files['video']
     if video.filename == '':
         return jsonify({'status': 'fail', 'message': 'No selected video'}), 400
-    if video and allowed_file(video.filename):
+    if video:
         # 自动生成文件名为当前日期+时间（精确到毫秒）
         now = datetime.now()
         filename = now.strftime("%Y-%m-%d_%H-%M-%S_%f")[:-3] + ".mp4"
