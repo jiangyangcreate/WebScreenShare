@@ -1,10 +1,14 @@
-# app.py
-
 from flask import Flask, request, redirect, url_for, send_from_directory, render_template, jsonify
+from flask_socketio import SocketIO, emit
 import os
 from datetime import datetime
+import secrets
 
+# 生成一个随机的密钥
+secret_key = secrets.token_hex(16)  # 生成 32 个字符的随机字符串
 app = Flask(__name__)
+app.config['SECRET_KEY'] = secret_key  # 使用生成的密钥
+socketio = SocketIO(app)
 
 # 设置上传文件夹
 UPLOAD_FOLDER = 'uploads'
@@ -70,5 +74,59 @@ def media_interface():
     # 至少选择一项已经在前端验证，这里不再重复
     return render_template('media_interface.html', screen=screen, camera=camera, sound=sound)
 
+# 新增的路由：媒体查看页面
+@app.route('/media_view')
+def media_view():
+    return render_template('media_view.html')
+
+# SocketIO 事件处理
+host_sid = None
+
+@socketio.on('connect', namespace='/host')
+def host_connect():
+    global host_sid
+    host_sid = request.sid
+
+@socketio.on('disconnect', namespace='/host')
+def host_disconnect():
+    global host_sid
+    host_sid = None
+    socketio.emit('sharing_status', {'sharing': False}, namespace='/viewer')
+
+@socketio.on('sharing_status', namespace='/host')
+def sharing_status(status):
+    socketio.emit('sharing_status', status, namespace='/viewer')
+
+@socketio.on('viewer-join', namespace='/viewer')
+def viewer_join(viewer_id):
+    if host_sid:
+        socketio.emit('viewer-join', request.sid, room=host_sid, namespace='/host')
+    else:
+        emit('sharing_status', {'sharing': False})
+
+@socketio.on('offer', namespace='/host')
+def handle_offer(data):
+    to = data['to']
+    offer = data['offer']
+    socketio.emit('offer', {'from': request.sid, 'offer': offer}, room=to, namespace='/viewer')
+
+@socketio.on('answer', namespace='/viewer')
+def handle_answer(data):
+    to = data['to']
+    answer = data['answer']
+    socketio.emit('answer', {'from': request.sid, 'answer': answer}, room=to, namespace='/host')
+
+@socketio.on('candidate', namespace='/host')
+def host_candidate(data):
+    to = data['to']
+    candidate = data['candidate']
+    socketio.emit('candidate', {'from': request.sid, 'candidate': candidate}, room=to, namespace='/viewer')
+
+@socketio.on('candidate', namespace='/viewer')
+def viewer_candidate(data):
+    to = data['to']
+    candidate = data['candidate']
+    socketio.emit('candidate', {'from': request.sid, 'candidate': candidate}, room=to, namespace='/host')
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8080)
+    socketio.run(app, debug=True, host='0.0.0.0', port=8080)

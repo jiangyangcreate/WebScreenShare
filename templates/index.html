@@ -41,6 +41,9 @@
 <body>
     <h1>欢迎使用文件上传和下载服务</h1>
     <a href="{{ url_for('upload_file') }}">前往上传页面</a>
-    <a href="{{ url_for('media_selection') }}">前往多媒体分享页面</a>
+    {% if request.remote_addr == '127.0.0.1' %}
+        <a href="{{ url_for('media_selection') }}">多媒体主持人配置</a>
+    {% endif %}
+    <a href="{{ url_for('media_view') }}">前往多媒体查看页面</a>
 </body>
 </html>

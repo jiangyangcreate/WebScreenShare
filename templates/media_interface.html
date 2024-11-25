@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>媒体接口</title>
+    <title>主持人分享页面</title>
+    <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,7 +13,7 @@
             color: #f0f0f0;
             margin: 0;
             padding: 20px;
-            position: relative; /* For positioning draggable elements */
+            position: relative; /* 定位可拖拽元素 */
         }
         h1 {
             color: #ff6600;
@@ -48,7 +49,7 @@
             gap: 10px;
             z-index: 1000;
         }
-        /* 喇叭按钮样式 */
+        /* 控制按钮样式 */
         .control-button {
             background-color: #ff6600;
             border: none;
@@ -65,7 +66,7 @@
         .control-button.muted::after {
             content: '🔇';
         }
-        /* 录屏按钮样式 */
+        /* 录屏按钮正在录制的样式 */
         #record-button.recording {
             background-color: red;
         }
@@ -121,29 +122,46 @@
             const hiddenAudio = document.getElementById('hidden-audio');
             {% endif %}
 
+            // 全局媒体流变量，便于复用
+            let screenStream = null;
+            let cameraStream = null;
+            let audioStream = null;
+
+            // 初始化 Socket.IO
+            const socket = io('/host');
+            const peerConnections = {};
+
+            // 创建全局的媒体流（本地流）
+            let localStream = new MediaStream();
+
+            // 获取屏幕流
             {% if screen %}
             try {
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 screenElement.srcObject = screenStream;
+                screenStream.getTracks().forEach(track => localStream.addTrack(track));
             } catch (err) {
                 console.error('屏幕共享错误:', err);
                 alert('无法共享屏幕。请检查权限或尝试其他浏览器。');
             }
             {% endif %}
 
+            // 获取摄像头流
             {% if camera %}
             try {
-                const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 cameraElement.srcObject = cameraStream;
+                cameraStream.getTracks().forEach(track => localStream.addTrack(track));
             } catch (err) {
                 console.error('摄像头错误:', err);
                 alert('无法访问摄像头。请检查权限或尝试其他浏览器。');
             }
             {% endif %}
 
+            // 获取音频流
             {% if sound %}
             try {
-                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 hiddenAudio.srcObject = audioStream;
                 hiddenAudio.play().catch(err => {
                     console.error('音频播放错误:', err);
@@ -157,48 +175,11 @@
             speakerButton.addEventListener('click', () => {
                 isMuted = !isMuted;
                 hiddenAudio.muted = isMuted;
-                if (isMuted) {
-                    speakerButton.textContent = '🔇';
-                } else {
-                    speakerButton.textContent = '🔊';
-                }
+                speakerButton.textContent = isMuted ? '🔇' : '🔊';
             });
 
             // 使喇叭按钮可拖拽
-            if (speakerButton) {
-                (function makeDraggable(el) {
-                    let isDragging = false;
-                    let startX, startY, origX, origY;
-
-                    el.addEventListener('mousedown', (e) => {
-                        if (el.id === 'speaker-button') {
-                            isDragging = true;
-                            startX = e.clientX;
-                            startY = e.clientY;
-                            const rect = el.getBoundingClientRect();
-                            origX = rect.left;
-                            origY = rect.top;
-                            document.body.style.userSelect = 'none';
-                        }
-                    });
-
-                    document.addEventListener('mousemove', (e) => {
-                        if (isDragging) {
-                            const dx = e.clientX - startX;
-                            const dy = e.clientY - startY;
-                            el.style.left = `${origX + dx}px`;
-                            el.style.top = `${origY + dy}px`;
-                            el.style.right = 'auto';
-                            el.style.bottom = 'auto';
-                        }
-                    });
-
-                    document.addEventListener('mouseup', () => {
-                        isDragging = false;
-                        document.body.style.userSelect = 'auto';
-                    });
-                })(speakerButton);
-            }
+            makeElementDraggable(speakerButton);
             {% endif %}
 
             // 录屏功能
@@ -220,36 +201,33 @@
                 recordButton.classList.add('recording');
                 recordButton.textContent = '⏹️'; // 更改按钮图标为停止
                 isRecording = true;
+
                 try {
-                    let combinedStream;
-                    {% if screen and camera %}
-                        // 同时录制屏幕和摄像头
-                        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                        let audioStream;
-                        {% if sound %}
-                            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        {% endif %}
-                        combinedStream = new MediaStream([
-                            ...screenStream.getVideoTracks(),
-                            ...cameraStream.getVideoTracks(),
-                            {% if sound %}
-                                ...audioStream.getAudioTracks()
-                            {% endif %}
-                        ]);
-                    {% elif screen %}
-                        // 仅录制屏幕
-                        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-                        combinedStream = screenStream;
-                    {% else %}
-                        alert('无法获取屏幕或摄像头权限');
-                        recordButton.classList.remove('recording');
-                        recordButton.textContent = '🎥'; // 恢复按钮图标
-                        isRecording = false;
-                        return;
+                    let combinedStream = new MediaStream();
+
+                    {% if screen %}
+                    if (screenStream) {
+                        screenStream.getTracks().forEach(track => combinedStream.addTrack(track));
+                    }
                     {% endif %}
 
-                    mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/mp4' });
+                    {% if camera %}
+                    if (cameraStream) {
+                        cameraStream.getTracks().forEach(track => combinedStream.addTrack(track));
+                    }
+                    {% endif %}
+
+                    {% if sound %}
+                    if (audioStream) {
+                        audioStream.getTracks().forEach(track => combinedStream.addTrack(track));
+                    }
+                    {% endif %}
+
+                    if (combinedStream.getTracks().length === 0) {
+                        throw new Error('没有可用的媒体流进行录制');
+                    }
+
+                    mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm; codecs=vp9' });
 
                     mediaRecorder.ondataavailable = function(event) {
                         if (event.data.size > 0) {
@@ -259,7 +237,7 @@
 
                     mediaRecorder.onstop = saveRecording;
 
-                    mediaRecorder.start(1000); // 每秒获取一次数据片段
+                    mediaRecorder.start(1000); // 每秒获取数据
 
                 } catch (err) {
                     console.error('录屏错误:', err);
@@ -280,18 +258,18 @@
             }
 
             function saveRecording() {
-                const blob = new Blob(recordedChunks, { type: 'video/mp4' });
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
                 recordedChunks = [];
 
                 const now = new Date();
                 const filename = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_` +
                                  `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}` +
-                                 `_${now.getMilliseconds()}ms.mp4`;
+                                 `_${now.getMilliseconds()}ms.webm`;
 
                 const formData = new FormData();
                 formData.append('video', blob, filename);
 
-                fetch('/upload_video', {  // 修改为 '/upload_video'
+                fetch('/upload_video', {
                     method: 'POST',
                     body: formData
                 })
@@ -317,22 +295,28 @@
             // 使摄像头容器可拖拽和可调整大小
             const cameraContainer = document.getElementById('camera-container');
             if (cameraContainer) {
-                // 拖拽功能
+                makeElementDraggable(cameraContainer);
+            }
+            {% endif %}
+
+            // 可拖拽功能封装
+            function makeElementDraggable(el) {
                 let isDragging = false;
                 let offsetX, offsetY;
 
-                cameraContainer.addEventListener('mousedown', (e) => {
-                    if (e.target !== cameraElement) return; // 仅在点击容器其他部分时拖拽
+                el.addEventListener('mousedown', (e) => {
                     isDragging = true;
-                    offsetX = e.clientX - cameraContainer.offsetLeft;
-                    offsetY = e.clientY - cameraContainer.offsetTop;
+                    offsetX = e.clientX - el.offsetLeft;
+                    offsetY = e.clientY - el.offsetTop;
                     document.body.style.userSelect = 'none';
                 });
 
                 document.addEventListener('mousemove', (e) => {
                     if (isDragging) {
-                        cameraContainer.style.left = `${e.clientX - offsetX}px`;
-                        cameraContainer.style.top = `${e.clientY - offsetY}px`;
+                        el.style.left = `${e.clientX - offsetX}px`;
+                        el.style.top = `${e.clientY - offsetY}px`;
+                        el.style.right = 'auto';
+                        el.style.bottom = 'auto';
                     }
                 });
 
@@ -340,10 +324,55 @@
                     isDragging = false;
                     document.body.style.userSelect = 'auto';
                 });
-
-                // 调整大小由 CSS 的 `resize: both;` 和 `overflow: hidden;` 处理
             }
-            {% endif %}
+
+            // 开始流媒体共享
+            startStreaming();
+
+            function startStreaming() {
+                socket.emit('sharing_status', { sharing: true });
+
+                socket.on('viewer-join', async (id) => {
+                    const pc = new RTCPeerConnection();
+
+                    // 保存连接
+                    peerConnections[id] = pc;
+
+                    // 将本地流添加到连接中
+                    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+                    pc.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            socket.emit('candidate', { to: id, candidate: event.candidate });
+                        }
+                    };
+
+                    // 创建 offer 并发送给观众
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    socket.emit('offer', { to: id, offer: pc.localDescription });
+                });
+
+                socket.on('answer', async ({ from, answer }) => {
+                    const pc = peerConnections[from];
+                    if (pc) {
+                        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                    }
+                });
+
+                socket.on('candidate', async ({ from, candidate }) => {
+                    const pc = peerConnections[from];
+                    if (pc) {
+                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    }
+                });
+            }
+
+            // 页面关闭时通知服务器
+            window.addEventListener('beforeunload', () => {
+                socket.emit('sharing_status', { sharing: false });
+                socket.close();
+            });
         });
     </script>
 </body>

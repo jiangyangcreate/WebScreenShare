@@ -1,0 +1,133 @@
+<!-- templates/media_view.html -->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>观众查看页面</title>
+    <!-- 引入 Socket.IO JS 库 -->
+    <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+</head>
+<body>
+    <h1 id="status">主持人正在分享</h1>
+    <video id="remoteVideo" autoplay controls></video>
+    <button id="muteButton">🔊</button>
+    <button id="recordButton">🎥</button>
+
+    <script>
+        const socket = io('/viewer');
+        let peerConnection;
+        let remoteStream = new MediaStream();
+        const remoteVideo = document.getElementById('remoteVideo');
+        remoteVideo.srcObject = remoteStream;
+
+        socket.on('connect', () => {
+            console.log('观众已连接到服务器，Socket ID:', socket.id);
+            // 告诉服务器观众已加入
+            socket.emit('viewer-join', socket.id);
+        });
+
+        socket.on('disconnect', () => {
+            console.log('与服务器断开连接');
+            document.getElementById('status').textContent = '与服务器断开连接';
+        });
+
+        socket.on('sharing_status', (status) => {
+            console.log('收到分享状态:', status);
+            if (status.sharing) {
+                document.getElementById('status').textContent = '主持人正在分享';
+            } else {
+                document.getElementById('status').textContent = '主持人停止了分享';
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+            }
+        });
+
+        socket.on('offer', async ({ from, offer }) => {
+            console.log('收到主持人的 offer');
+            peerConnection = new RTCPeerConnection();
+
+            peerConnection.ontrack = (event) => {
+                console.log('收到新的媒体流 track');
+                event.streams[0].getTracks().forEach(track => {
+                    remoteStream.addTrack(track);
+                });
+            };
+
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('candidate', { to: from, candidate: event.candidate });
+                    console.log('发送 ICE Candidate 给主持人:', event.candidate);
+                }
+            };
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            console.log('设置远程描述为主持人的 offer');
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            console.log('创建并发送 answer 给主持人');
+            socket.emit('answer', { to: from, answer: peerConnection.localDescription });
+        });
+
+        socket.on('candidate', async ({ from, candidate }) => {
+            console.log('收到主持人的 ICE Candidate');
+            if (peerConnection) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                console.log('添加主持人的 ICE Candidate');
+            }
+        });
+
+        // 静音按钮
+        document.getElementById('muteButton').addEventListener('click', () => {
+            isMuted = !isMuted;
+            document.getElementById('remoteVideo').muted = isMuted;
+            document.getElementById('muteButton').textContent = isMuted ? '🔇' : '🔊';
+        });
+
+        // 录屏按钮
+        document.getElementById('recordButton').addEventListener('click', () => {
+            if (!isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        });
+
+        function startRecording() {
+            const stream = document.getElementById('remoteVideo').srcObject;
+            if (!stream) return alert('没有可录制的媒体流');
+
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (event) => {
+                recordedChunks.push(event.data);
+            };
+            mediaRecorder.onstop = saveRecording;
+            mediaRecorder.start();
+
+            isRecording = true;
+            document.getElementById('recordButton').textContent = '⏹️';
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            isRecording = false;
+            document.getElementById('recordButton').textContent = '🎥';
+        }
+
+        function saveRecording() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            recordedChunks = [];
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `录制_${Date.now()}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
