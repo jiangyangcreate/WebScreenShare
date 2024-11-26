@@ -3,12 +3,14 @@ from flask_socketio import SocketIO, emit
 import os
 from datetime import datetime
 import secrets
+from flask_cors import CORS
 
 # 生成一个随机的密钥
 secret_key = secrets.token_hex(16)  # 生成 32 个字符的随机字符串
 app = Flask(__name__)
+CORS(app)  # 允许所有域名的跨域请求
 app.config['SECRET_KEY'] = secret_key  # 使用生成的密钥
-socketio = SocketIO(app)
+socketio = SocketIO(app, max_http_buffer_size=200 * 1024 ** 2)
 
 # 设置上传文件夹
 UPLOAD_FOLDER = 'uploads'
